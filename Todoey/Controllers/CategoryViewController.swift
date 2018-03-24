@@ -8,8 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeViewTableViewController{
     
     let realm = try! Realm()
 
@@ -18,16 +19,22 @@ class CategoryViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadItems()
+        //tableView.separatorStyle = .none
     }
     //MARK:- Table View Datasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categoryArray?.count ?? 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoCategoryCell", for: indexPath)
-        
-        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Categories added yet."
+        guard let category = categoryArray?[indexPath.row] else { fatalError() }
+        
+        guard let categoryColor = UIColor(hexString: category.color) else { fatalError() }
+        cell.backgroundColor = categoryColor
+        cell.textLabel?.textColor = ContrastColorOf(categoryColor, returnFlat: true)
+        
+        
         return cell
     }
     
@@ -55,9 +62,6 @@ class CategoryViewController: UITableViewController {
     }
     func loadItems(){
         categoryArray = realm.objects(Category.self)
-        
-        
-
         tableView.reloadData()
 
     }
@@ -68,7 +72,7 @@ class CategoryViewController: UITableViewController {
         let alert = UIAlertController(title: "Add New Todoey Category", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             let newCategory = Category()
-            
+            newCategory.color = UIColor.randomFlat.hexValue()
             newCategory.name = textField.text!
             
             self.saveData(category: newCategory)
@@ -82,8 +86,18 @@ class CategoryViewController: UITableViewController {
         present(alert, animated: true)
 
     }
-    
-    
-    
-    
+    //MARK:- Delete from Swipe
+    override func updateModel(at indexPath: IndexPath) {
+        if let categoryForDeletion = self.categoryArray?[indexPath.row]{
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                }
+            } catch {
+                print(error)
+            }
+        }
+        
+    }
 }
+
